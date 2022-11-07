@@ -17,12 +17,38 @@ type Vec3 = [number, number, number];
 type Vec4 = [number, number, number, number];
 type Matrix3x4 = [Vec3, Vec3, Vec3, Vec3];
 type SimplePolygon = Vec2[];
-type Polygons = SimplePolygon | SimplePolygon[];
+type Polygons = SimplePolygon|SimplePolygon[];
 type Mesh = {
   vertPos: Vec3[],
   triVerts: Vec3[],
   vertNormal?: Vec3[],
   halfedgeTangent?: Vec4[]
+};
+type SerializedVec3 = {
+  x: number,
+  y: number,
+  z: number,
+};
+type SerializedVec4 = {
+  x: number,
+  y: number,
+  z: number,
+  w: number,
+};
+interface Vector<T> {
+  get(idx: number): T;
+  push_back(value: T): void;
+  resize(count: number, value: T): void;
+  set(idx: number, value: T): void;
+  size(): number;
+}
+type Vector_vec3 = Vector<SerializedVec3>;
+type Vector_vec4 = Vector<SerializedVec4>;
+type MeshVec = {
+  vertPos: Vector_vec3,
+  triVerts: Vector_vec3,
+  vertNormal: Vector_vec3,
+  halfedgeTangent: Vector_vec4
 };
 type Box = {
   min: Vec3,
@@ -81,9 +107,9 @@ declare class Manifold {
    * Applies an Euler angle rotation to the manifold, first about the X axis,
    * then Y, then Z, in degrees. We use degrees so that we can minimize rounding
    * error, and eliminate it completely for any multiples of 90 degrees.
-   * Additionally, more efficient code paths are used to update the manifold when
-   * the transforms only rotate by multiples of 90 degrees. This operation can
-   * be chained. Transforms are combined and applied lazily.
+   * Additionally, more efficient code paths are used to update the manifold
+   * when the transforms only rotate by multiples of 90 degrees. This operation
+   * can be chained. Transforms are combined and applied lazily.
    *
    * @param v [X, Y, Z] rotation in degrees.
    */
@@ -95,7 +121,7 @@ declare class Manifold {
    *
    * @param v The vector to multiply every vertex by per component.
    */
-  scale(v: Vec3 | number): Manifold;
+  scale(v: Vec3|number): Manifold;
 
   /**
    * Boolean union
@@ -205,8 +231,8 @@ declare class Manifold {
   getCurvature(): Curvature;
 
   /**
-   * This returns a Mesh of simple vectors of vertices and triangles suitable for
-   * saving or other operations outside of the context of this library.
+   * This returns a Mesh of simple vectors of vertices and triangles suitable
+   * for saving or other operations outside of the context of this library.
    */
   getMesh(): Mesh;
 
@@ -257,7 +283,7 @@ declare class Manifold {
  * @param size The X, Y, and Z dimensions of the box.
  * @param center Set to true to shift the center to the origin.
  */
-declare function cube(size?: Vec3 | number, center?: boolean): Manifold;
+declare function cube(size?: Vec3|number, center?: boolean): Manifold;
 
 /**
  * A convenience constructor for the common case of extruding a circle. Can also
@@ -273,8 +299,8 @@ declare function cube(size?: Vec3 | number, center?: boolean): Manifold;
  * origin at the bottom.
  */
 declare function cylinder(
-  height: number, radiusLow: number, radiusHigh?: number,
-  circularSegments?: number, center?: boolean): Manifold;
+    height: number, radiusLow: number, radiusHigh?: number,
+    circularSegments?: number, center?: boolean): Manifold;
 
 /**
  * Constructs a geodesic sphere of a given radius.
@@ -341,8 +367,8 @@ declare function tetrahedron(): Manifold;
  * Default {1, 1}.
  */
 declare function extrude(
-  crossSection: Polygons, height: number, nDivisions?: number,
-  twistDegrees?: number, scaleTop?: Vec2): Manifold;
+    crossSection: Polygons, height: number, nDivisions?: number,
+    twistDegrees?: number, scaleTop?: Vec2): Manifold;
 
 /**
  * Constructs a manifold from a set of polygons by revolving this cross-section
@@ -356,7 +382,7 @@ declare function extrude(
  * calculated by the static Defaults.
  */
 declare function revolve(
-  crossSection: Polygons, circularSegments?: number): Manifold;
+    crossSection: Polygons, circularSegments?: number): Manifold;
 
 declare function union(a: Manifold, b: Manifold): Manifold;
 declare function difference(a: Manifold, b: Manifold): Manifold;
@@ -393,8 +419,8 @@ declare function compose(manifolds: Manifold[]): Manifold;
  * it with a negative value.
  */
 declare function levelSet(
-  sdf: (point: Vec3) => number, bounds: Box, edgeLength: number,
-  level?: number): Manifold;
+    sdf: (point: Vec3) => number, bounds: Box, edgeLength: number,
+    level?: number): Manifold;
 
 /**
  * @name Defaults
@@ -412,10 +438,19 @@ declare function setCircularSegments(segments: number): void;
 declare function getCircularSegments(radius: number): number;
 ///@}
 
+/**
+ * Create a Manifold from a serialized Mesh object (MeshVec). Unlike the
+ * constructor, this method does not dispose the Mesh after using it.
+ *
+ * @param meshVec The serialized Mesh object to convert into a Manifold.
+ */
+declare function ManifoldFromMeshVec(meshVec: MeshVec): Manifold;
+
 declare interface ManifoldStatic {
   cube: typeof cube;
   cylinder: typeof cylinder;
   sphere: typeof sphere;
+  smooth: typeof smooth;
   tetrahedron: typeof tetrahedron;
   extrude: typeof extrude;
   revolve: typeof revolve;
@@ -428,8 +463,9 @@ declare interface ManifoldStatic {
   setMinCircularEdgeLength: typeof setMinCircularEdgeLength;
   setCircularSegments: typeof setCircularSegments;
   getCircularSegments: typeof getCircularSegments;
+  ManifoldFromMeshVec: typeof ManifoldFromMeshVec;
   Manifold: typeof Manifold;
-  setup: function(): void;
+  setup: () => void;
 }
 
 declare function Module(): Promise<ManifoldStatic>;
