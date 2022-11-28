@@ -18,38 +18,6 @@ type Vec4 = [number, number, number, number];
 type Matrix3x4 = [Vec3, Vec3, Vec3, Vec3];
 type SimplePolygon = Vec2[];
 type Polygons = SimplePolygon|SimplePolygon[];
-type Mesh = {
-  vertPos: Vec3[],
-  triVerts: Vec3[],
-  vertNormal?: Vec3[],
-  halfedgeTangent?: Vec4[]
-};
-type SerializedVec3 = {
-  x: number,
-  y: number,
-  z: number,
-};
-type SerializedVec4 = {
-  x: number,
-  y: number,
-  z: number,
-  w: number,
-};
-interface Vector<T> {
-  get(idx: number): T;
-  push_back(value: T): void;
-  resize(count: number, value: T): void;
-  set(idx: number, value: T): void;
-  size(): number;
-}
-type Vector_vec3 = Vector<SerializedVec3>;
-type Vector_vec4 = Vector<SerializedVec4>;
-type MeshVec = {
-  vertPos: Vector_vec3,
-  triVerts: Vector_vec3,
-  vertNormal: Vector_vec3,
-  halfedgeTangent: Vector_vec4
-};
 type Box = {
   min: Vec3,
   max: Vec3
@@ -81,11 +49,28 @@ type MeshRelation = {
   triBary: BaryRef[],
 };
 
+declare class Mesh {
+  vertPos: Float32Array;
+  triVerts: Uint32Array;
+  vertNormal?: Float32Array;
+  halfedgeTangent?: Float32Array;
+  get numTri(): number;
+  get numVert(): number;
+  verts(tri: number): Uint32Array<3>;
+  position(vert: number): Float32Array<3>;
+  normal(vert: number): Float32Array<3>;
+  tangent(halfedge: number): Float32Array<4>;
+}
+
 declare class Manifold {
   /**
    * Create a Manifold from a Mesh object.
+   *
+   * @param triProperties An array of the same length as mesh.triVerts, filled with references to the properties index. Note the same vertex can have different properties in different triangles.
+   * @param properties An array whose length is the largest index in triProperties times the length of propertyTolerance (the number of properties). Think of it as a property matrix indexed as [index * numProperties + propertyNum].
+   * @param propertyTolerance An array of precision values for each property. This is the amount of interpolation error allowed before two neighboring triangles are considered not coplanar. A good place to start is 1e-5 times the largest value you expect this property to take.
    */
-  constructor(mesh: Mesh);
+  constructor(mesh: Mesh, triProperties?: Uint32Array, properties?: Float32Array, propertyTolerance?: Float32Array);
   /**
    * Transform this Manifold in space. The first three columns form a 3x3 matrix
    * transform and the last is a translation vector. This operation can be
